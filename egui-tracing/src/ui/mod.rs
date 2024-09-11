@@ -4,22 +4,16 @@ mod state;
 
 use std::sync::{Arc, Mutex};
 
-use egui::{Color32, Label, Response, TextStyle, TextWrapMode, Widget};
+use egui::{Color32, Response, TextStyle, TextWrapMode, Widget};
 use globset::GlobSetBuilder;
 
 use self::color::ToColor32;
-use self::components::common::CommonProps;
 use self::components::constants;
 use self::components::level_menu_button::LevelMenuButton;
-use self::components::table::Table;
-use self::components::table_cell::TableCell;
-use self::components::table_header::TableHeader;
 use self::components::target_menu_button::TargetMenuButton;
 use self::state::LogsState;
-use crate::string::Ellipse;
 use crate::time::DateTimeFormatExt;
 use crate::tracing::collector::EventCollector;
-use crate::tracing::CollectedEvent;
 
 #[derive(Debug, Clone)]
 pub struct Logs {
@@ -62,78 +56,77 @@ impl Widget for &Logs {
         let events = self.collector.events();
         let filtered_events = events
             .iter()
-            .filter(|event| state.level_filter.get(event.level) && !glob.is_match(&event.target));
+            .rev()
+            .filter(|event| state.level_filter.get(event.level) && !glob.is_match(&event.target))
+            .collect::<Vec<_>>();
 
-        let row_height = constants::SEPARATOR_SPACING
-            + ui.style().text_styles.get(&TextStyle::Small).unwrap().size;
+        let row_height = ui.style().text_styles.get(&TextStyle::Small).unwrap().size;
 
-        Table::default()
-            .on_clear(|| {
-                self.collector.clear();
-            })
-            .header(|ui| {
-                TableHeader::default()
-                    .common_props(CommonProps::default().min_width(100.0))
-                    .children(|ui| {
+        ui.allocate_ui(egui::Vec2::new(100.+80.+100.+120.+120., (row_height + constants::SEPARATOR_SPACING) * (filtered_events.len() as f32)), |ui|{
+            egui_extras::TableBuilder::new(ui)
+                .column(egui_extras::Column::initial(100.).resizable(true))
+                .column(egui_extras::Column::initial(80.).resizable(true))
+                .columns(egui_extras::Column::initial(120.).resizable(true),2)
+                .striped(true)
+                .vscroll(true)
+                .header(row_height, |mut row|{
+                    row.col(|ui|{
+                        ui.set_min_width(100.);
                         ui.label("Time");
-                    })
-                    .show(ui);
-                TableHeader::default()
-                    .common_props(CommonProps::default().min_width(80.0))
-                    .children(|ui| {
+                    });
+                    row.col(|ui|{
+                        ui.set_min_width(80.);
                         LevelMenuButton::default()
                             .state(&mut state.level_filter)
                             .show(ui)
-                    })
-                    .show(ui);
-                TableHeader::default()
-                    .common_props(CommonProps::default().min_width(120.0))
-                    .children(|ui| {
+                    });
+                    row.col(|ui|{
+                        ui.set_min_width(120.);
                         TargetMenuButton::default()
                             .state(&mut state.target_filter)
                             .show(ui)
-                    })
-                    .show(ui);
-                TableHeader::default()
-                    .common_props(CommonProps::default().min_width(120.0))
-                    .children(|ui| {
+                    });
+                    row.col(|ui|{
+                        ui.set_min_width(120.);
                         ui.label("Message");
-                    })
-                    .show(ui);
-            })
-            .row_height(row_height)
-            .row(|ui, event: &CollectedEvent| {
-                TableCell::default()
-                    .common_props(CommonProps::default().min_width(100.0))
-                    .children(|ui| {
-                        ui.colored_label(Color32::GRAY, event.time.format_short())
-                            .on_hover_text(event.time.format_detailed());
-                    })
-                    .show(ui);
-                TableCell::default()
-                    .common_props(CommonProps::default().min_width(80.0))
-                    .children(|ui| {
-                        ui.colored_label(event.level.to_color32(), event.level.as_str());
-                    })
-                    .show(ui);
-                TableCell::default()
-                    .common_props(CommonProps::default().min_width(120.0))
-                    .children(|ui| {
-                        ui.colored_label(Color32::GRAY, event.target.truncate_graphemes(18))
-                            .on_hover_text(&event.target);
-                    })
-                    .show(ui);
-                TableCell::default()
-                    .common_props(CommonProps::default().min_width(120.0))
-                    .children(|ui| {
-                        let message = event.fields.get("message").unwrap();
-
-                        ui.style_mut().visuals.override_text_color = Some(Color32::WHITE);
-                        ui.add(Label::new(message).wrap_mode(TextWrapMode::Extend))
-                            .on_hover_text(message);
-                    })
-                    .show(ui);
-            })
-            .show(ui, filtered_events.iter())
+                    });
+                }).body(|body|{
+                    body.rows(row_height, filtered_events.len(), |mut row| {
+                        match filtered_events.get(row.index()) {
+                            None => {
+                                for _ in 0..5 {
+                                    row.col(|ui|{
+                                        ui.label("Out of bounds index");
+                                    });
+                                }
+                            }
+                            Some(event) => {
+                                row.col(|ui|{
+                                    ui.add(egui::Label::new(egui::RichText::new(event.time.format_short()).color(Color32::GRAY)))
+                                        .on_hover_text(event.time.format_detailed());
+                                });
+                                row.col(|ui|{
+                                    ui.add(egui::Label::new(egui::RichText::new(event.level.as_str()).color(event.level.to_color32())));
+                                });
+                                row.col(|ui|{
+                                    ui.add(egui::Label::new(egui::RichText::new(&event.target).color(Color32::GRAY)).wrap_mode(TextWrapMode::Truncate)).on_hover_text(&event.target);
+                                });
+                                row.col(|ui|{
+                                    match event.fields.get("message") {
+                                        Some(message) => {
+                                            ui.add(egui::Label::new(egui::RichText::new(message).color(Color32::WHITE)).wrap_mode(TextWrapMode::Truncate))
+                                                .on_hover_text(message);
+                                        },
+                                        None => {
+                                            ui.add(egui::Label::new(egui::RichText::new("No Message available").color(Color32::GRAY)).wrap_mode(TextWrapMode::Truncate));
+                                        },
+                                    };
+                                });
+                            }
+                        }
+                    }
+                )
+            });
+        }).response
     }
 }
