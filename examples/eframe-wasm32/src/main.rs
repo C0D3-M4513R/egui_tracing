@@ -1,5 +1,4 @@
 use egui_tracing::egui;
-use egui_tracing::tracing::collector::EventCollector;
 #[cfg(target_arch = "wasm32")]
 use egui_tracing::tracing_subscriber;
 #[cfg(target_arch = "wasm32")]
@@ -20,7 +19,7 @@ fn main() {
             .start(
                 "eframe-canvas",
                 web_options,
-                Box::new(|_cc| Box::new(MyApp::new(collector))),
+                Box::new(|_cc| Box::new(MyApp::new(egui_tracing::Logs::new(collector)))),
             )
             .await
             .expect("failed to start eframe");
@@ -31,12 +30,12 @@ fn main() {
 fn main() {}
 
 pub struct MyApp {
-    collector: EventCollector,
+    collector: egui_tracing::Logs,
 }
 
 impl MyApp {
     #[cfg(target_arch = "wasm32")]
-    fn new(collector: EventCollector) -> Self {
+    fn new(collector: egui_tracing::Logs) -> Self {
         Self { collector }
     }
 }
@@ -44,7 +43,7 @@ impl MyApp {
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.add(egui_tracing::Logs::new(self.collector.clone()))
+            ui.add(&self.collector)
         });
     }
 }

@@ -34,6 +34,11 @@ impl Logs {
 
 impl Widget for Logs {
     fn ui(self, ui: &mut egui::Ui) -> Response {
+        Widget::ui(&self, ui)
+    }
+}
+impl Widget for &Logs {
+    fn ui(self, ui: &mut egui::Ui) -> Response {
         let state = ui.memory_mut(|mem| {
             let state_mem_id = ui.id();
             mem.data
