@@ -5,7 +5,6 @@ mod state;
 use std::sync::{Arc, Mutex};
 
 use egui::{Color32, Response, TextStyle, TextWrapMode, Widget};
-use globset::GlobSetBuilder;
 
 use self::color::ToColor32;
 use self::components::constants;
@@ -18,21 +17,22 @@ use crate::tracing::collector::EventCollector;
 #[derive(Debug, Clone)]
 pub struct Logs {
     collector: EventCollector,
+    glob: Option<globset::GlobSet>,
 }
 
 impl Logs {
     #[must_use]
     pub const fn new(collector: EventCollector) -> Self {
-        Self { collector }
+        Self { collector, glob: None }
     }
 }
 
 impl Widget for Logs {
-    fn ui(self, ui: &mut egui::Ui) -> Response {
-        Widget::ui(&self, ui)
+    fn ui(mut self, ui: &mut egui::Ui) -> Response {
+        Widget::ui(&mut self, ui)
     }
 }
-impl Widget for &Logs {
+impl Widget for &mut Logs {
     fn ui(self, ui: &mut egui::Ui) -> Response {
         let state = ui.memory_mut(|mem| {
             let state_mem_id = ui.id();
@@ -44,14 +44,13 @@ impl Widget for &Logs {
         });
         let mut state = state.lock().unwrap();
 
-        // TODO: cache the globset
-        let glob = {
-            let mut glob = GlobSetBuilder::new();
+        let glob = self.glob.get_or_insert_with(||{
+            let mut glob = globset::GlobSetBuilder::new();
             for target in state.target_filter.targets.clone() {
                 glob.add(target);
             }
             glob.build().unwrap()
-        };
+        });
 
         let events = self.collector.events();
         let filtered_events = events
