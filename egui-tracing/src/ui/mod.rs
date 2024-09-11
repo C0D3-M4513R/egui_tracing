@@ -62,8 +62,7 @@ impl Widget for &Logs {
         let events = self.collector.events();
         let filtered_events = events
             .iter()
-            .filter(|event| state.level_filter.get(event.level) && !glob.is_match(&event.target))
-            .collect::<Vec<_>>();
+            .filter(|event| state.level_filter.get(event.level) && !glob.is_match(&event.target));
 
         let row_height = constants::SEPARATOR_SPACING
             + ui.style().text_styles.get(&TextStyle::Small).unwrap().size;
