@@ -21,6 +21,7 @@ use crate::time::DateTimeFormatExt;
 use crate::tracing::collector::EventCollector;
 use crate::tracing::CollectedEvent;
 
+#[derive(Debug, Clone)]
 pub struct Logs {
     collector: EventCollector,
 }
