@@ -79,7 +79,7 @@ impl Widget for &mut Logs {
                         ui.label("Message");
                     });
                 }).body(|mut body|{
-                    let message_size = *body.widths().last().expect("We added 5 columns, but there were no widths?");
+                    let message_size = body.widths()[3];
 
                     let filtered_events = filtered_events
                         .into_iter()
