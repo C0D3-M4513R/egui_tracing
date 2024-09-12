@@ -86,7 +86,7 @@ impl Widget for &mut Logs {
                         egui::Label::new(
                             egui::RichText::new(message)
                                 .color(Color32::WHITE)
-                        ).wrap_mode(TextWrapMode::Extend)
+                        ).wrap_mode(TextWrapMode::Wrap)
                             .layout_in_ui(body.ui_mut())
                             .2
                             .rect
@@ -118,7 +118,7 @@ impl Widget for &mut Logs {
                                         None => "No Message available",
                                     };
                                     ui.add(egui::Label::new(egui::RichText::new(message).color(Color32::WHITE))
-                                        .wrap_mode(TextWrapMode::Extend))
+                                        .wrap_mode(TextWrapMode::Wrap))
                                         .on_hover_text(message);
                                 });
                             }
