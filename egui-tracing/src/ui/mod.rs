@@ -47,7 +47,8 @@ impl Widget for &mut Logs {
             .filter(|event| self.logs_state.level_filter.get(event.level) && !glob.is_match(&event.target))
             .collect::<Vec<_>>();
 
-        let row_height = ui.style().text_styles.get(&TextStyle::Small).unwrap().size;
+        let small_font_id = TextStyle::Small.resolve(ui.style());
+        let row_height = small_font_id.size;
 
         ui.allocate_ui(egui::Vec2::new(100.+80.+100.+120.+120., (2.*row_height) * (filtered_events.len() as f32)), |ui|{
             egui_extras::TableBuilder::new(ui)
@@ -78,21 +79,28 @@ impl Widget for &mut Logs {
                         ui.label("Message");
                     });
                 }).body(|mut body|{
-                    let heights = filtered_events.iter().map(|event|{
-                        let message = match event.fields.get("message") {
-                            Some(message) => message.as_str(),
-                            None => "No Message available",
-                        };
-                        egui::Label::new(
-                            egui::RichText::new(message)
-                                .color(Color32::WHITE)
-                        ).wrap_mode(TextWrapMode::Wrap)
-                            .layout_in_ui(body.ui_mut())
-                            .2
-                            .rect
-                            .height()
-                    }).collect::<Vec<_>>();
-                    body.heterogeneous_rows(heights.into_iter(), |mut row| {
+                    let message_size = *body.widths().last().expect("We added 5 columns, but there were no widths?");
+
+                    let filtered_events = filtered_events
+                        .into_iter()
+                        .map(|event| {
+                            let message = match event.fields.get("message") {
+                                Some(message) => message.as_str(),
+                                None => "No Message available",
+                            };
+
+                            let galley = body.ui_mut().fonts(|font| {
+                                font.layout(message.to_string(), small_font_id.clone(), Color32::WHITE, message_size)
+                            });
+
+                            (event, message, galley)
+                        }).collect::<Vec<_>>();
+
+                    body.heterogeneous_rows(
+                        filtered_events.iter().map(|(_, _, galley)|{
+                            galley.rect.height()
+                        }),
+                        |mut row| {
                         match filtered_events.get(row.index()) {
                             None => {
                                 for _ in 0..5 {
@@ -101,7 +109,7 @@ impl Widget for &mut Logs {
                                     });
                                 }
                             }
-                            Some(event) => {
+                            Some((event, message, galley)) => {
                                 row.col(|ui|{
                                     ui.add(egui::Label::new(egui::RichText::new(event.time.format_short()).color(Color32::GRAY)))
                                         .on_hover_text(event.time.format_detailed());
@@ -113,13 +121,9 @@ impl Widget for &mut Logs {
                                     ui.add(egui::Label::new(egui::RichText::new(&event.target).color(Color32::GRAY)).wrap_mode(TextWrapMode::Truncate)).on_hover_text(&event.target);
                                 });
                                 row.col(|ui|{
-                                    let message = match event.fields.get("message") {
-                                        Some(message) => message.as_str(),
-                                        None => "No Message available",
-                                    };
-                                    ui.add(egui::Label::new(egui::RichText::new(message).color(Color32::WHITE))
+                                    ui.add(egui::Label::new(galley.clone())
                                         .wrap_mode(TextWrapMode::Wrap))
-                                        .on_hover_text(message);
+                                        .on_hover_text(*message);
                                 });
                             }
                         }
