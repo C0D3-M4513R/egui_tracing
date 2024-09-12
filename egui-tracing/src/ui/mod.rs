@@ -47,7 +47,7 @@ impl Widget for &mut Logs {
             .filter(|event| self.logs_state.level_filter.get(event.level) && !glob.is_match(&event.target))
             .collect::<Vec<_>>();
 
-        let small_font_id = TextStyle::Small.resolve(ui.style());
+        let small_font_id = TextStyle::Body.resolve(ui.style());
         let row_height = small_font_id.size;
 
         ui.allocate_ui(egui::Vec2::new(100.+80.+100.+120.+120., (2.*row_height) * (filtered_events.len() as f32)), |ui|{
