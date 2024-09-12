@@ -77,8 +77,22 @@ impl Widget for &mut Logs {
                         ui.set_min_width(120.);
                         ui.label("Message");
                     });
-                }).body(|body|{
-                    body.rows(row_height, filtered_events.len(), |mut row| {
+                }).body(|mut body|{
+                    let heights = filtered_events.iter().map(|event|{
+                        let message = match event.fields.get("message") {
+                            Some(message) => message.as_str(),
+                            None => "No Message available",
+                        };
+                        egui::Label::new(
+                            egui::RichText::new(message)
+                                .color(Color32::WHITE)
+                        ).wrap_mode(TextWrapMode::Extend)
+                            .layout_in_ui(body.ui_mut())
+                            .2
+                            .rect
+                            .height()
+                    }).collect::<Vec<_>>();
+                    body.heterogeneous_rows(heights.into_iter(), |mut row| {
                         match filtered_events.get(row.index()) {
                             None => {
                                 for _ in 0..5 {
@@ -99,15 +113,13 @@ impl Widget for &mut Logs {
                                     ui.add(egui::Label::new(egui::RichText::new(&event.target).color(Color32::GRAY)).wrap_mode(TextWrapMode::Truncate)).on_hover_text(&event.target);
                                 });
                                 row.col(|ui|{
-                                    match event.fields.get("message") {
-                                        Some(message) => {
-                                            ui.add(egui::Label::new(egui::RichText::new(message).color(Color32::WHITE)).wrap_mode(TextWrapMode::Truncate))
-                                                .on_hover_text(message);
-                                        },
-                                        None => {
-                                            ui.add(egui::Label::new(egui::RichText::new("No Message available").color(Color32::GRAY)).wrap_mode(TextWrapMode::Truncate));
-                                        },
+                                    let message = match event.fields.get("message") {
+                                        Some(message) => message.as_str(),
+                                        None => "No Message available",
                                     };
+                                    ui.add(egui::Label::new(egui::RichText::new(message).color(Color32::WHITE))
+                                        .wrap_mode(TextWrapMode::Extend))
+                                        .on_hover_text(message);
                                 });
                             }
                         }
