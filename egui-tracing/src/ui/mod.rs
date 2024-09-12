@@ -2,8 +2,8 @@ mod color;
 mod components;
 mod state;
 
-use egui::{Color32, Response, TextStyle, TextWrapMode, Widget};
-
+use egui::{Align, Color32, Response, TextFormat, TextStyle, TextWrapMode, Widget};
+use egui::text::{LayoutJob, LayoutSection, TextWrapping};
 use self::color::ToColor32;
 use self::components::level_menu_button::LevelMenuButton;
 use self::components::target_menu_button::TargetMenuButton;
@@ -90,7 +90,25 @@ impl Widget for &mut Logs {
                             };
 
                             let galley = body.ui_mut().fonts(|font| {
-                                font.layout(message.to_string(), small_font_id.clone(), Color32::WHITE, message_size)
+                                font.layout_job(LayoutJob{
+                                    text: message.to_string(),
+                                    sections: vec![LayoutSection{
+                                        leading_space: 0.0,
+                                        byte_range: 0..message.len(),
+                                        format: TextFormat::simple(small_font_id.clone(), Color32::WHITE),
+                                    }],
+                                    wrap: TextWrapping{
+                                        max_width: message_size,
+                                        max_rows: usize::MAX,
+                                        break_anywhere: true,
+                                        overflow_character: None,
+                                    },
+                                    first_row_min_height: 0.0,
+                                    break_on_newline: false,
+                                    halign: Align::LEFT,
+                                    justify: true,
+                                    round_output_size_to_nearest_ui_point: true,
+                                })
                             });
 
                             (event, message, galley)
