@@ -50,7 +50,7 @@ impl Widget for &mut Logs {
         let small_font_id = TextStyle::Body.resolve(ui.style());
         let row_height = small_font_id.size;
 
-        ui.allocate_ui(egui::Vec2::new(100.+80.+100.+120.+120., (2.*row_height) * (filtered_events.len() as f32)), |ui|{
+        ui.allocate_ui(egui::Vec2::new(f32::max(100.+80.+120.+120., ui.available_width()), f32::max((2.*row_height) * (filtered_events.len() as f32), ui.available_height())), |ui|{
             egui_extras::TableBuilder::new(ui)
                 .column(egui_extras::Column::initial(100.).resizable(true))
                 .column(egui_extras::Column::initial(80.).resizable(true))
